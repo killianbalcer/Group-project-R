@@ -11,7 +11,7 @@ n_sim <- 10000
 payoffs <- numeric(n_sim) 
 
 for (j in 1:n_sim) {
-  Z <- rnorm(m, mean=0, sd=1)  
+  Z <- rnorm(n_sim, mean=0, sd=1)  
   S_Ti <- numeric(m)
   S_Ti[1] <- S0
   
@@ -45,7 +45,7 @@ v_call_values
 #1.3
 K_star <- 225 
 for (j in 1:n_sim) {
-  Z_star <- rnorm(m, mean=0, sd=1)  
+  Z_star <- rnorm(n_sim, mean=0, sd=1)  
   S_Ti_star <- numeric(m)
   S_Ti_Star[1] <- S0
   barrier_hit <- FALSE   #barrier not passed
