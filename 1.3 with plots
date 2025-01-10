@@ -7,7 +7,7 @@ sigma <- 0.3         # Volatility
 T <- 1               # Time to maturity (1 year)
 K <- 150             # Strike price
 K_prime <- 225       # Barrier level (up-in or up-out)
-m <- 12              # Number of fixing dates (monthly)
+m <- 252              # Number of fixing dates (monthly)
 N <- 10000             # Number of simulations
 delta_t <- T / m     # Time interval between fixings
 
