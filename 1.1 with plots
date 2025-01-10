@@ -1,0 +1,57 @@
+#1.1
+# Parameters
+S0 <- 150          # Initial stock price
+r <- 0.04          # Risk-free rate (annual)
+sigma <- 0.3       # Volatility
+T <- 1             # Time to maturity (years)
+K <- 150           # Strike price
+m <- 252           # Number of fixing dates (monthly)
+n_sim <- 10000     # Number of simulations
+dt <- T / m        # Time interval between fixings
+
+# Monte Carlo Simulation
+
+payoffs <- numeric(n_sim)
+
+for (j in 1:n_sim) {
+  Z <- rnorm(m, mean = 0, sd = 1)  
+  S_Ti <- numeric(m)
+  S_Ti[1] <- S0
+  
+  for (i in 2:m) {
+    S_Ti[i] <- S_Ti[i-1] * exp((r - (sigma^2) / 2) * dt + sigma * sqrt(dt) * Z[i-1])
+  }
+  
+  S_Ti_12 <- S_Ti[seq(1, m, length.out = 12)]
+  
+  A_T <- prod(S_Ti_12)^(1 / 12)
+  
+  payoffs[j] <- max(A_T - K, 0)
+}
+
+V_0 <- mean(payoffs) * exp(-r * T)
+
+plot(1:m, S_Ti, type = "l", col = "blue",
+     main = "Example of one possible trajectory of S_Ti",
+     xlab = "Périods", ylab = "Price ($)")
+points_indices <- seq(12, m, length.out = 12)
+points_values <- S_Ti[points_indices]
+points(points_indices, points_values, col = "red", pch = 20)
+abline(h = A_T, col = "red", lty = 2, lwd = 2)  # Geometric average
+abline(h = K, col = "black", lty = 2, lwd = 2)  # Strike price
+legend("topleft", legend = c("Daily Stock Price", "Fixing Prices", paste("Geometric Avg :", round(A_T, 2)), "Strike Price"),
+       col = c("blue", "red", "red", "black"),
+       lty = c(1, NA, 2, 2), 
+       pch = c(NA, 19, NA, NA), 
+       lwd = c(2, NA, 2, 2)
+)
+# Plot for the distribution of payoffs
+hist(payoffs, breaks = 30, col = "lightblue", 
+     main = "Payoff Distribution of Geometric Asian Option",
+     xlab = "Payoff", ylab = "Frequency", border = "white")
+# Calculate cumulative mean of payoffs
+cumulative_mean <- cumsum(payoffs) / seq_along(payoffs)
+
+
+cat("Geometric Asian Option Price using Monte Carlo Simulation:", V_0, "\n")
+
