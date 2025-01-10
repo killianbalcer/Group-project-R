@@ -1,0 +1,97 @@
+#1.3
+
+# Parameters for barrier options
+S0 <- 150            # Initial stock price
+r <- 0.04            # Risk-free rate
+sigma <- 0.3         # Volatility
+T <- 1               # Time to maturity (1 year)
+K <- 150             # Strike price
+K_prime <- 225       # Barrier level (up-in or up-out)
+m <- 12              # Number of fixing dates (monthly)
+N <- 10000             # Number of simulations
+delta_t <- T / m     # Time interval between fixings
+
+# Monte Carlo simulation for barrier options
+payoffs_up_in <- numeric(N)
+payoffs_up_out <- numeric(N)
+
+for (i in 1:N) {
+  # Simulate stock prices for each path
+  S <- numeric(m)
+  S[1] <- S0
+  barrier_breached_up_in <- FALSE
+  barrier_breached_up_out <- FALSE
+  
+  for (j in 2:m) {
+    Z <- rnorm(1)  # Generate standard normal random variable
+    S[j] <- S[j - 1] * exp((r - 0.5 * sigma^2) * delta_t + sigma * sqrt(delta_t) * Z)
+    
+    # Check for up-in barrier breach
+    if (S[j] >= K_prime) {
+      barrier_breached_up_in <- TRUE
+    }
+    
+    # Check for up-out barrier breach
+    if (S[j] >= K_prime) {
+      barrier_breached_up_out <- TRUE
+    }
+  }
+  
+  # Payoff for up-in barrier option (active only if barrier is breached)
+  if (barrier_breached_up_in) {
+    payoff_up_in <- max(0, mean(S) - K)
+  } else {
+    payoff_up_in <- 0
+  }
+  
+  # Payoff for up-out barrier option (invalid if barrier is breached)
+  if (barrier_breached_up_out) {
+    payoff_up_out <- 0
+  } else {
+    payoff_up_out <- max(0, mean(S) - K)
+  }
+  
+  payoffs_up_in[i] <- payoff_up_in
+  payoffs_up_out[i] <- payoff_up_out
+}
+
+# Discounted payoffs
+average_payoff_up_in <- mean(payoffs_up_in)
+V_up_in <- exp(-r * T) * average_payoff_up_in
+
+average_payoff_up_out <- mean(payoffs_up_out)
+V_up_out <- exp(-r * T) * average_payoff_up_out
+
+# Output the prices of the barrier options
+cat("Up-in Barrier Option Price using Monte Carlo Simulation:", V_up_in, "\n")
+cat("Up-out Barrier Option Price using Monte Carlo Simulation:", V_up_out, "\n")
+
+#plot for Distribution of Payoffs
+par(mfrow = c(1, 2))  # 1 row, 2 columns for the combined plot
+# Add the barrier level
+abline(h = K_prime, col = "red", lwd = 2, lty = 2)
+legend("topright", legend = c("Stock Paths", "Barrier Level"), col = c("blue", "red"), lty = c(1, 2), lwd = c(1, 2))
+
+# Distribution of Payoffs for Up-In and Up-Out Barrier Options
+hist(payoffs_up_in, breaks = 50, col = "green", main = "Up-In Barrier Option Payoff Distribution",
+     xlab = "Payoff", ylab = "Frequency")
+hist(payoffs_up_out, breaks = 50, col = "orange", main = "Up-Out Barrier Option Payoff Distribution",
+     xlab = "Payoff", ylab = "Frequency")
+# Reset par to default single-panel layout
+par(mfrow = c(1, 1))
+
+#plot for convergence
+# Cumulative average payoff for up-in
+cumulative_avg_up_in <- cumsum(payoffs_up_in) / (1:N)
+
+# Cumulative average payoff for up-out
+cumulative_avg_up_out <- cumsum(payoffs_up_out) / (1:N)
+
+# Plot cumulative averages
+plot(1:N, cumulative_avg_up_in, type = "l", col = "green",
+     xlab = "Number of Simulations", ylab = "Cumulative Average Payoff",
+     main = "Convergence of Payoffs")
+lines(1:N, cumulative_avg_up_out, col = "orange")
+legend("topright", legend = c("Up-In", "Up-Out"),
+       col = c("green", "orange"), lty = 1, lwd = 2)
+
