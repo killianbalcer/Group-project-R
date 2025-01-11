@@ -1,0 +1,181 @@
+#question 1
+
+#1.1
+# Parameters
+S0 <- 150          # Initial stock price
+r <- 0.04          # Risk-free rate (annual)
+sigma <- 0.3       # Volatility
+T <- 1             # Time to maturity (years)
+K <- 150           # Strike price
+m <- 252           # Number of fixing dates (monthly)
+n_sim <- 10000     # Number of simulations
+dt <- T / m        # Time interval between fixings
+
+# Monte Carlo Simulation
+
+payoffs <- numeric(n_sim)
+
+for (j in 1:n_sim) {
+  Z <- rnorm(m, mean = 0, sd = 1)  
+  S_Ti <- numeric(m)
+  S_Ti[1] <- S0
+  
+  for (i in 2:m) {
+    S_Ti[i] <- S_Ti[i-1] * exp((r - (sigma^2) / 2) * dt + sigma * sqrt(dt) * Z[i-1])
+  }
+  
+  S_Ti_12 <- S_Ti[seq(1, m, length.out = 12)]
+  
+  A_T <- prod(S_Ti_12)^(1 / 12)
+  
+  payoffs[j] <- max(A_T - K, 0)
+}
+
+V_0 <- mean(payoffs) * exp(-r * T)
+#display results
+cat("Geometric Asian Option Price using Monte Carlo Simulation:", V_0, "\n")
+
+#plotting
+plot(1:m, S_Ti, type = "l", col = "blue",
+     main = "Example of one possible trajectory of S_Ti",
+     xlab = "Périods", ylab = "Price ($)")
+points_indices <- seq(12, m, length.out = 12)
+points_values <- S_Ti[points_indices]
+points(points_indices, points_values, col = "red", pch = 20)
+abline(h = A_T, col = "red", lty = 2, lwd = 2)  # Geometric average
+abline(h = K, col = "black", lty = 2, lwd = 2)  # Strike price
+legend("topleft", legend = c("Daily Stock Price", "Fixing Prices", paste("Geometric Avg :", round(A_T, 2)), "Strike Price"),
+       col = c("blue", "red", "red", "black"),
+       lty = c(1, NA, 2, 2), 
+       pch = c(NA, 19, NA, NA), 
+       lwd = c(2, NA, 2, 2)
+)
+# Plot for the distribution of payoffs
+hist(payoffs, breaks = 30, col = "lightblue", 
+     main = "Payoff Distribution of Geometric Asian Option",
+     xlab = "Payoff", ylab = "Frequency", border = "white")
+# Calculate cumulative mean of payoffs
+cumulative_mean <- cumsum(payoffs) / seq_along(payoffs)
+
+
+#1.2
+# Parameters (same as 1.1)
+S0 <- 150        # Initial stock price
+K <- 150         # Strike price
+r <- 0.04        # Risk-free rate (annual)
+sigma <- 0.3     # Volatility
+T <- 1           # Time to maturity (years)
+
+# Black-Scholes-Merton Formula
+d1 <- (log(S0 / K) + (r + 0.5 * sigma^2) * T) / (sigma * sqrt(T))
+d2 <- d1 - sigma * sqrt(T)
+
+# Standard normal cumulative distribution function
+N_cdf <- function(x) pnorm(x)
+
+# Call option price
+V_call <- S0 * N_cdf(d1) - K * exp(-r * T) * N_cdf(d2)
+
+# Output the price
+cat("European Call Option Price using Black-Scholes-Merton Formula:", V_call, "\n")
+
+#1.3
+# Parameters with k'
+S0 <- 150          # Initial stock price
+r <- 0.04          # Risk-free rate
+sigma <- 0.3       # Volatility
+T <- 1             # Time to maturity (1 year)
+K <- 150           # Strike price
+K_prime <- 225     # Barrier level
+m <- 252           # Number of time steps (daily)
+n_sim <- 10000     # Number of simulations
+dt <- T / m        # Time interval between steps
+
+# Up-in barrier pricing
+up_in_payoffs <- numeric(n_sim)
+
+for (j in 1:n_sim) {
+  Z <- rnorm(m, mean = 0, sd = 1)
+  S_Ti <- numeric(m)
+  S_Ti[1] <- S0
+  barrier_hit <- FALSE
+  
+  for (i in 2:m) {
+    # Generate standard normal random variable
+    S_Ti[i] <- S_Ti[i - 1] * exp((r - 0.5 * sigma^2) * dt + sigma * sqrt(dt) * Z[i-1])
+    if (S_Ti[i] >= K_prime) {
+      barrier_hit <- TRUE
+    }
+  }
+  
+  # If barrier is hit, calculate the payoff
+  if (barrier_hit) {
+    # Select 12 evenly spaced points for geometric mean (monthly sampling)
+    S_Ti_12 <- S_Ti[seq(1, m, length.out = 12)]
+    A_T <- prod(S_Ti_12)^(1 / 12)  # Geometric mean
+    up_in_payoffs[j] <- max(A_T - K, 0)
+  }
+}
+
+# Discounted price for up-in barrier option
+V_0_up_in <- exp(-r * T) * mean(up_in_payoffs)
+
+# Up-out barrier pricing
+up_out_payoffs <- numeric(n_sim)
+
+for (j in 1:n_sim) {
+  Z <- rnorm(m, mean = 0, sd = 1)
+  S_Ti <- numeric(m)
+  S_Ti[1] <- S0
+  barrier_hit <- FALSE
+  
+  for (i in 2:m) {
+    # Generate standard normal random variable
+    S_Ti[i] <- S_Ti[i - 1] * exp((r - 0.5 * sigma^2) * dt + sigma * sqrt(dt) * Z[i-1])
+    if (S_Ti[i] >= K_prime) {
+      barrier_hit <- TRUE
+    }
+  }
+  
+  # If barrier is not hit, calculate the payoff
+  if (!barrier_hit) {
+    # Select 12 evenly spaced points for geometric mean (monthly sampling)
+    S_Ti_12 <- S_Ti[seq(1, m, length.out = 12)]
+    A_T <- prod(S_Ti_12)^(1 / 12)  # Geometric mean
+    up_out_payoffs[j] <- max(A_T - K, 0)
+  }
+}
+
+# Discounted price for up-out barrier option
+V_0_up_out <- exp(-r * T) * mean(up_out_payoffs)
+
+# Results
+cat("Price of Up-In Barrier Option:", V_0_up_in, "\n")
+cat("Price of Up-Out Barrier Option:", V_0_up_out, "\n")
+
+# Calculate breach rate
+barrier_breaches <- numeric(n_sim)
+
+for (j in 1:n_sim) {
+  S_Ti <- numeric(m)
+  S_Ti[1] <- S0
+  for (i in 2:m) {
+    Z <- rnorm(1)
+    S_Ti[i] <- S_Ti[i - 1] * exp((r - 0.5 * sigma^2) * dt + sigma * sqrt(dt) * Z)
+    if (S_Ti[i] >= K_prime) {
+      barrier_breaches[j] <- 1
+      break
+    }
+  }
+}
+
+breach_rate <- mean(barrier_breaches) * 100
+cat("Barrier Breach Rate (%):", breach_rate, "\n")
+
+# Plotting
+plot(1:m, S_Ti, type = "l", col = "blue", main = "Stock Price Trajectory", xlab = "Periods", ylab = "Price ($)")
+points(seq(12, m, length.out = 12), S_Ti[seq(12, m, length.out = 12)], col = "red", pch = 20)
+abline(h = K_prime, col = "purple", lty = 2, lwd = 2) #barrier level
+abline(h = K, col = "black", lty = 2, lwd = 2)  # Strike price
+legend("topleft", legend = c("Stock Price", "Fixing Prices", "barrier level", "Strike Price"),
+       col = c("blue", "red", "purple", "black"), lty = c(1, NA, 2, 2), pch = c(NA, 19, NA, NA), lwd = c(2, NA, 2, 2))
